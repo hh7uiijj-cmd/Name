@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ลงชื่อออกกองถ่าย</title>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f3ee;--card:#fff;--ink:#1f1b16;--mute:#7a7268;--line:#e6e0d6;--acc:#c0392b;--acc2:#2c3e50;--ok:#2e7d4f;--full:#b9b2a6}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Prompt',system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+.wrap{max-width:720px;margin:0 auto;padding:20px 16px 90px}
+h1{font-size:26px;margin:6px 0 4px}
+.sub{color:var(--mute);font-size:14px;margin:0 0 16px}
+.note{background:#fff7e0;border:1px solid #f0dca0;border-radius:12px;padding:12px 14px;font-size:14px;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px}
+label{font-weight:600;font-size:14px;display:block;margin-bottom:6px}
+input[type=text]{width:100%;padding:12px 14px;font:inherit;border:1px solid var(--line);border-radius:12px;background:#fff}
+input[type=text]:focus{outline:2px solid var(--acc);border-color:transparent}
+.day{margin-top:22px}
+.day h2{font-size:18px;margin:0 0 2px;display:flex;align-items:center;gap:8px}
+.day h2 span.tag{background:var(--acc2);color:#fff;border-radius:8px;padding:1px 10px;font-size:13px}
+.day p{margin:0 0 10px;color:var(--mute);font-size:13px}
+.role{display:flex;gap:12px;align-items:flex-start;padding:12px;border:1.5px solid var(--line);border-radius:14px;margin-bottom:8px;background:#fff;cursor:pointer;transition:.12s}
+.role:hover{border-color:#cbbfae}
+.role.sel{border-color:var(--acc);background:#fff4f2}
+.role.full:not(.sel){opacity:.55;cursor:not-allowed;background:#f1eee9}
+.role input{margin-top:4px;width:20px;height:20px;accent-color:var(--acc)}
+.rb{flex:1;min-width:0}
+.rt{font-weight:600}
+.rd{font-size:12.5px;color:var(--mute)}
+.cnt{font-size:12.5px;font-weight:600;white-space:nowrap;color:var(--ok);background:#e8f4ec;border-radius:999px;padding:2px 10px}
+.cnt.full{color:#7a7268;background:#ece8e1}
+.names{font-size:12.5px;color:#4a443c;margin-top:4px}
+.bar{position:fixed;left:0;right:0;bottom:0;background:#fffffff2;backdrop-filter:blur(6px);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom))}
+.bar .in{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.pick{flex:1;font-size:14px}
+button{font:inherit;font-weight:600;border:0;border-radius:12px;padding:12px 20px;cursor:pointer;background:var(--acc);color:#fff}
+button:disabled{background:#cfc8bd;cursor:not-allowed}
+button.ghost{background:#fff;color:var(--ink);border:1px solid var(--line);padding:8px 14px;font-size:13px}
+button.del{background:none;color:var(--acc);padding:0 4px;font-size:12px;border:0}
+.msg{font-size:14px;margin:8px 0 0}
+.msg.err{color:var(--acc)} .msg.ok{color:var(--ok)}
+.sum{margin-top:26px}
+.sum h3{margin:0 0 8px;font-size:16px}
+.row{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dashed var(--line);padding:8px 0;font-size:14px}
+.row:last-child{border:0}
+.muted{color:var(--mute)}
+.mine{display:none}
+.mine.show{display:block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎬 ลงชื่อออกกองถ่าย</h1>
+  <p class="sub">ขอคนไปช่วยในวันถ่ายทำเท่านั้น · ถ่ายทำทั้งหมด 2 วัน</p>
+
+  <div class="note">
+    <b>กติกา:</b> ฝ่ายพร็อพที่ช่วงนี้ไม่มีหน้าที่ประจำ → ให้ลง <b>2 หน้าที่</b> ต่อวัน (ลงได้ทั้ง D1 และ D2 รวมสูงสุด 4 หน้าที่ — จะลงซ้ำหน้าที่เดิมคนละวันก็ได้) ระบบนี้เป็นการขอคนมาช่วยเฉพาะวันถ่ายทำ
+  </div>
+
+  <div class="card">
+    <label for="nm">ชื่อ-ชื่อเล่น</label>
+    <input id="nm" type="text" maxlength="40" placeholder="เช่น นาซ่า" autocomplete="off">
+    <div id="status" class="msg muted">กำลังโหลดข้อมูล…</div>
+  </div>
+
+  <div id="mine" class="card mine"></div>
+
+  <div id="days"></div>
+
+  <div class="sum card" id="sum"></div>
+</div>
+
+<div class="bar"><div class="in">
+  <div class="pick" id="pick">เลือกหน้าที่ 2 อย่าง (0/2)</div>
+  <button id="save" disabled>ยืนยันลงชื่อ</button>
+</div></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+const MAX = 2; // ต่อวัน
+const dayCount=(d)=>[...sel].filter(k=>k.startsWith(d+'-')).length;
+const DAYS = [
+  {id:'d1', tag:'D1', title:'ถ่ายผู้เข้าแข่งขัน', roles:[
+    {id:'care', t:'ดูแลนักแสดง', d:'ดูแลผู้เข้าแข่งขัน/นักแสดงตลอดการถ่าย', n:4},
+    {id:'light', t:'ถือไฟ', d:'ถือไฟตามที่ตากล้องบอก', n:1},
+    {id:'cam', t:'ผู้ช่วยตากล้อง', d:'เน้นคนคล่องตัว', n:1},
+    {id:'prop', t:'ดูแลพร็อพ', d:'จัดเตรียม/ส่งพร็อพหน้ากอง', n:2},
+  ]},
+  {id:'d2', tag:'D2', title:'ถ่ายซีนผู้ต้องสงสัย', roles:[
+    {id:'actA', t:'นักแสดง บทขี้เล่น', d:'แสดง 1 คน', n:1},
+    {id:'actB', t:'นักแสดง บทขี้อายติ๊งต๊อง', d:'แสดง 1 คน', n:1},
+    {id:'prop', t:'ดูแลพร็อพ', d:'จัดเตรียม/ส่งพร็อพหน้ากอง', n:2},
+    {id:'care', t:'ผู้ดูแลนักแสดง', d:'ดูแลนักแสดงตลอดการถ่าย', n:2},
+  ]},
+];
+const ALL = {};
+DAYS.forEach(d=>d.roles.forEach(r=>{ALL[d.id+'-'+r.id]={...r,day:d.tag,dayTitle:d.title}}));
+
+// ===== วาง firebaseConfig ของคุณตรงนี้ =====
+const firebaseConfig = {
+  apiKey: 'YOUR_API_KEY',
+  authDomain: 'YOUR_PROJECT.firebaseapp.com',
+  projectId: 'YOUR_PROJECT',
+  appId: 'YOUR_APP_ID'
+};
+// ==========================================
+let db=null, me=null, isOwner=false;
+let rows=[];           // [{id,name,picks}]
+let sel=new Set();
+let loaded=false;
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function takenBy(key){return rows.filter(r=>(r.picks||[]).includes(key))}
+function myRow(){return rows.find(r=>r.id===me)}
+
+function render(){
+  const mine=myRow();
+  const mineKeys=new Set(mine?mine.picks||[]:[]);
+  $('#days').innerHTML=DAYS.map(d=>`
+    <div class="day">
+      <h2><span class="tag">${d.tag}</span>${esc(d.title)}</h2>
+      <p>เลือกหน้าที่ที่ต้องการ</p>
+      ${d.roles.map(r=>{
+        const key=d.id+'-'+r.id, list=takenBy(key), left=r.n-list.length;
+        const isSel=sel.has(key);
+        const full=left<=0 && !mineKeys.has(key);
+        const names=list.map(x=>esc(x.name)).join(', ');
+        return `<label class="role ${isSel?'sel':''} ${full?'full':''}">
+          <input type="checkbox" data-k="${key}" ${isSel?'checked':''} ${full?'disabled':''}>
+          <div class="rb"><div class="rt">${esc(r.t)}</div><div class="rd">${esc(r.d)}</div>
+          ${names?`<div class="names">✓ ${names}</div>`:''}</div>
+          <span class="cnt ${left<=0?'full':''}">${left<=0?'เต็มแล้ว':`ว่าง ${left}/${r.n}`}</span>
+        </label>`}).join('')}
+    </div>`).join('');
+  document.querySelectorAll('#days input').forEach(i=>i.onchange=()=>{
+    const k=i.dataset.k;
+    if(i.checked){ if(dayCount(k.split('-')[0])>=MAX){i.checked=false;flash('วันนี้เลือกได้สูงสุด '+MAX+' หน้าที่',true);return} sel.add(k) } else sel.delete(k);
+    render(); updateBar();
+  });
+
+  // my signup box
+  const box=$('#mine');
+  if(mine && (mine.picks||[]).length){
+    box.classList.add('show');
+    box.innerHTML=`<b>✅ คุณลงชื่อแล้ว</b> (${esc(mine.name)})<br>`+
+      mine.picks.map(k=>`• ${ALL[k]?`${ALL[k].day} · ${esc(ALL[k].t)}`:esc(k)}`).join('<br>')+
+      `<div class="msg muted">แก้ไขได้โดยเลือกใหม่ด้านล่างแล้วกดยืนยันอีกครั้ง</div><div style="margin-top:8px"><button class="ghost" id="cancel">ยกเลิกการลงชื่อของฉัน</button></div>`;
+    $('#cancel').onclick=cancelMine;
+  } else { box.classList.remove('show'); box.innerHTML='' }
+
+  // summary
+  const people=rows.filter(r=>(r.picks||[]).length);
+  let h=`<h3>สรุปรายชื่อ (${people.length} คน)</h3>`;
+  DAYS.forEach(d=>{
+    h+=`<div class="muted" style="margin:10px 0 2px;font-weight:600">${d.tag} · ${esc(d.title)}</div>`;
+    d.roles.forEach(r=>{
+      const l=takenBy(d.id+'-'+r.id);
+      h+=`<div class="row"><span>${esc(r.t)}</span><span>${l.length?l.map(x=>esc(x.name)+(isOwner?` <button class="del" data-del="${esc(x.id)}">ลบ</button>`:'')).join(', '):'<span class="muted">–</span>'}</span></div>`;
+    });
+  });
+  h+=`<div style="margin-top:12px"><button class="ghost" id="copy">คัดลอกสรุป</button></div>`;
+  $('#sum').innerHTML=h;
+  $('#copy').onclick=copySummary;
+  document.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{
+    try{await db.collection('signups').doc(b.dataset.del).delete()}catch(e){flash('ลบไม่สำเร็จ',true)}
+  });
+}
+
+function updateBar(){
+  const a=dayCount('d1'), b=dayCount('d2');
+  $('#pick').textContent=`D1: ${a}/${MAX} · D2: ${b}/${MAX}`;
+  $('#save').disabled=!(db && loaded && sel.size>=1 && $('#nm').value.trim().length>0);
+}
+
+function flash(t,err){const s=$('#status');s.textContent=t;s.className='msg '+(err?'err':'ok')}
+
+async function save(){
+  const name=$('#nm').value.trim().slice(0,40);
+  if(!name||sel.size<1)return;
+  $('#save').disabled=true;
+  // re-check capacity against the latest data
+  const mine=new Set((myRow()||{}).picks||[]);
+  for(const k of sel){
+    if(!mine.has(k) && takenBy(k).filter(x=>x.id!==me).length>=ALL[k].n){
+      flash(`"${ALL[k].t}" (${ALL[k].day}) เต็มแล้ว เลือกใหม่นะ`,true);sel.delete(k);render();updateBar();return;
+    }
+  }
+  try{
+    await db.collection('signups').doc(me).set({name,picks:[...sel],at:Date.now()});
+    flash('บันทึกแล้ว ขอบคุณที่มาช่วยนะ 🎬');
+  }catch(e){flash('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง',true)}
+  updateBar();
+}
+async function cancelMine(){
+  try{await db.collection('signups').doc(me).delete();sel.clear();flash('ยกเลิกการลงชื่อแล้ว');render();updateBar()}catch(e){flash('ยกเลิกไม่สำเร็จ',true)}
+}
+async function copySummary(){
+  let t='สรุปรายชื่อออกกองถ่าย\n';
+  DAYS.forEach(d=>{t+=`\n${d.tag} ${d.title}\n`;d.roles.forEach(r=>{t+=`- ${r.t}: ${takenBy(d.id+'-'+r.id).map(x=>x.name).join(', ')||'-'}\n`})});
+  try{await navigator.clipboard.writeText(t);flash('คัดลอกแล้ว')}catch(e){flash('คัดลอกไม่ได้ในหน้านี้',true)}
+}
+
+$('#nm').addEventListener('input',updateBar);
+$('#save').onclick=save;
+render();updateBar();
+
+(async()=>{
+  const timer=setTimeout(()=>{if(!loaded)flash('โหลดข้อมูลไม่ได้ เช็กอินเทอร์เน็ตหรือ firebaseConfig',true)},10000);
+  try{
+    if(firebaseConfig.apiKey==='YOUR_API_KEY'){flash('ยังไม่ได้ใส่ firebaseConfig ในไฟล์',true);return}
+    firebase.initializeApp(firebaseConfig);
+    const cred=await firebase.auth().signInAnonymously();
+    me=cred.user.uid;
+    db=firebase.firestore();
+    db.collection('signups').onSnapshot(snap=>{
+      rows=snap.docs.map(d=>{const v=d.data();return {id:d.id,name:(v&&v.name)||'ไม่ระบุ',picks:(v&&v.picks)||[]}});
+      clearTimeout(timer);
+      const first=!loaded; loaded=true;
+      const m=myRow();
+      if(first){ if(m){sel=new Set(m.picks);$('#nm').value=m.name} flash('พร้อมลงชื่อ') }
+      render();updateBar();
+    },()=>flash('โหลดข้อมูลไม่สำเร็จ (เช็ก Firestore rules)',true));
+  }catch(e){flash('เชื่อมต่อไม่ได้: '+(e.code||e.message),true)}
+})();
+</script>
+</body>
+</html>
